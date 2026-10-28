@@ -19,6 +19,8 @@ ALLOWED = {  # qué se puede escribir en cada fase
 }
 GIT_ONLY_DAW = re.compile(r"\bgit\s+(commit|push|checkout|switch|branch|reset|merge|rebase)\b|\bgh\s+pr\b")
 SHELL_WRITE = re.compile(r"(?<![0-9&])>>?(?!&)|\btee\b|\bsed\s+-i\b|\b(cp|mv|rm|touch)\s")
+PY_INLINE = re.compile(r"\bpython3?(\s+-[A-Za-z]+)*\s+(-c\b|-\s*<<|<<)")  # python -c / heredoc: escribe sin pasar por el guard
+DAW_CMD = re.compile(r"^python3 \.daw/daw\.py(\s|$)")
 
 
 def block(reason):
@@ -33,13 +35,14 @@ phase, ticket = st["phase"], st.get("ticket") or "_"
 
 if tool == "Bash":
     cmd = inp.get("command", "")
-    if ".daw/daw.py" in cmd and not re.search(r"[;&|]", cmd.replace("2>&1", "")):
+    parts = [p.strip() for p in re.split(r"&&|\|\||;", cmd.replace("2>&1", ""))]
+    if all(DAW_CMD.match(p) for p in parts):
         sys.exit(0)  # la máquina de estados es la única que mueve state, git y PR
     if "state.json" in cmd or ".daw/" in cmd:
         block("el state solo lo mueve `python3 .daw/daw.py`. No se toca a mano.")
     if GIT_ONLY_DAW.search(cmd):
         block("branch, commit, push y PR los hace la máquina (`daw.py classify` / `daw.py pr`), no el agente.")
-    if SHELL_WRITE.search(cmd.replace("2>&1", "").replace("> /dev/null", "").replace(">/dev/null", "")):
+    if PY_INLINE.search(cmd) or SHELL_WRITE.search(cmd.replace("2>&1", "").replace("> /dev/null", "").replace(">/dev/null", "")):
         block("en DAW mini los archivos se escriben solo con Write/Edit, para que el guard los pueda controlar.")
     sys.exit(0)
 
