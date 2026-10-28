@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 .daw/daw.py:*)",
+      "Bash(python3 -m unittest:*)",
+      "Read",
+      "Write(docs/**)",
+      "Edit(docs/**)",
+      "Write(tests/**)",
+      "Edit(tests/**)",
+      "Write(src/**)",
+      "Edit(src/**)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [ { "type": "command", "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/session.py\"" } ] }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash",
+        "hooks": [ { "type": "command", "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard.py\"" } ]
+      }
+    ]
+  }
+}
